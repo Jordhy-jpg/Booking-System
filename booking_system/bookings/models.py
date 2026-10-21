@@ -1,8 +1,11 @@
 import uuid
+from datetime import timedelta
 
 from django.conf import settings
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Q
+from django.utils import timezone
 
 
 class Room(models.Model):
@@ -42,10 +45,25 @@ class Booking(models.Model):
     participants = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name="bookings")
     created_at = models.DateTimeField(auto_now_add=True)
+    cancelled_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ["-created_at"]
-        constraints = [models.UniqueConstraint(fields=["room", "slot", "date"], name="unique_room_slot_booking_day")]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["room", "slot", "date"],
+                condition=Q(cancelled_at__isnull=True),
+                name="unique_room_slot_booking_day",
+            )
+        ]
+
+    @property
+    def cancellation_deadline(self):
+        return self.date - timedelta(days=3)
+
+    @property
+    def can_cancel(self):
+        return self.cancelled_at is None and timezone.localdate() <= self.cancellation_deadline
 
     def save(self, *args, **kwargs):
         if not self.code:

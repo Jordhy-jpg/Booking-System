@@ -1,12 +1,14 @@
 from django.urls import path
 
-from .views import BookingCreateView, MyBookingsView, RegisterView, RoomListView, SlotListView
+from .views import BookingCancelView, BookingCreateView, MyBookingsView, RegisterView, RoomListView, SlotListView
 
 urlpatterns = [
     path("rooms", RoomListView.as_view(), name="rooms"),
     path("rooms/", RoomListView.as_view()),
     path("slots", SlotListView.as_view(), name="slots"),
     path("slots/", SlotListView.as_view()),
+    path("bookings/<str:code>/cancel", BookingCancelView.as_view(), name="booking-cancel"),
+    path("bookings/<str:code>/cancel/", BookingCancelView.as_view()),
     path("bookings/mine", MyBookingsView.as_view(), name="my-bookings"),
     path("bookings/mine/", MyBookingsView.as_view()),
     path("bookings", BookingCreateView.as_view(), name="bookings"),

@@ -13,6 +13,7 @@ const authError = ref('')
 const authBusy = ref(false)
 const myBookings = ref([])
 const bookingsLoading = ref(false)
+const cancelingCode = ref('')
 const rooms = ref([])
 const slots = ref([])
 const loading = ref(false)
@@ -94,6 +95,21 @@ async function loadMyBookings() {
     authError.value = err.message
   } finally {
     bookingsLoading.value = false
+  }
+}
+
+async function cancelBooking(booking) {
+  if (!window.confirm(`Cancel ${booking.room} on ${booking.date}? The time will become available to others.`)) return
+  cancelingCode.value = booking.code
+  authError.value = ''
+  try {
+    const updated = await request(`/bookings/${encodeURIComponent(booking.code)}/cancel`, { method: 'POST' })
+    const index = myBookings.value.findIndex((item) => item.code === booking.code)
+    if (index !== -1) myBookings.value[index] = updated
+  } catch (err) {
+    authError.value = err.message
+  } finally {
+    cancelingCode.value = ''
   }
 }
 
@@ -205,6 +221,11 @@ onMounted(loadRooms)
           <div class="booking-card-top"><span class="booking-date">{{ new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(`${booking.date}T00:00:00`)) }}</span><span class="booking-code">{{ booking.code }}</span></div>
           <h2>{{ booking.room }}</h2>
           <div class="booking-meta"><span><small>TIME</small>{{ booking.time }}</span><span><small>GUESTS</small>{{ booking.participants }} people</span></div>
+          <div class="booking-cancel-row">
+            <span v-if="booking.cancelledAt" class="cancel-status">Cancelled</span>
+            <template v-else-if="booking.canCancel"><span class="cancel-deadline">Cancel by {{ new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(`${booking.cancelBy}T00:00:00`)) }}</span><button class="cancel-button" :disabled="cancelingCode === booking.code" @click="cancelBooking(booking)">{{ cancelingCode === booking.code ? 'Cancelling…' : 'Cancel booking' }}</button></template>
+            <span v-else class="cancel-status">Cancellation closed</span>
+          </div>
         </article>
       </div>
       <div v-else-if="!authError" class="empty-bookings"><span class="empty-mark">W</span><h2>Nothing on the calendar yet.</h2><p>Book a room while logged in and it will be waiting here.</p><button class="continue" @click="screen = 'booking'; restart()">Explore rooms →</button></div>

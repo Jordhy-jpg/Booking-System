@@ -39,6 +39,7 @@ All routes work under `/api/` (for example, `/api/rooms`) and the three assessme
 | `GET` | `/api/rooms` | List rooms: id, name, capacity, pricePerHour, facilities, image. |
 | `GET` | `/api/slots?roomId=1&date=2026-10-20` | List a room's slots and date-specific `isAvailable` state. `date` is optional. |
 | `POST` | `/api/bookings` | Create a booking. Returns `201` and its generated `code`. |
+| `POST` | `/api/bookings/{code}/cancel` | Cancel your booking through three calendar days before its date (JWT required). |
 | `POST` | `/api/auth/register/` | Register using Django's built-in `User` model. |
 | `POST` | `/api/auth/token/` | Exchange username/password for JWT access and refresh tokens. |
 | `POST` | `/api/auth/token/refresh/` | Refresh an access token. |
@@ -62,6 +63,7 @@ Example booking request:
 
 - Invalid input returns `422` with field-level messages. A past date, mismatched room/slot, invalid email or phone, and a guest count above room capacity are rejected.
 - An occupied room/slot/date combination returns `409`.
+- The booking owner may cancel through the date three calendar days before the reservation. Cancellation on that cutoff date is allowed; after it, the API returns `409`. Cancelled reservations remain in booking history, but their time slot becomes available again.
 - Missing resources naturally return `404`; successful reads return `200` and bookings return `201`.
 - The booking write path uses an atomic transaction, row locking where supported, and a database uniqueness constraint. The database constraint is the final guard against simultaneous requests creating duplicate reservations.
 - Writes to the room/slot catalogue require a Django staff user; public users may browse and place reservations.

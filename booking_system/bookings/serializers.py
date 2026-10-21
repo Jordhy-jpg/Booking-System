@@ -58,10 +58,13 @@ class BookingSerializer(serializers.ModelSerializer):
 class BookingHistorySerializer(serializers.ModelSerializer):
     room = serializers.CharField(source="room.name")
     time = serializers.TimeField(source="slot.time", format="%H:%M")
+    cancelledAt = serializers.DateTimeField(source="cancelled_at", read_only=True)
+    cancelBy = serializers.DateField(source="cancellation_deadline", read_only=True)
+    canCancel = serializers.BooleanField(source="can_cancel", read_only=True)
 
     class Meta:
         model = Booking
-        fields = ("code", "room", "date", "time", "participants", "created_at")
+        fields = ("code", "room", "date", "time", "participants", "created_at", "cancelledAt", "cancelBy", "canCancel")
 
 
 class RegisterSerializer(serializers.Serializer):
