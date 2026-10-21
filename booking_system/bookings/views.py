@@ -7,7 +7,7 @@ from rest_framework.throttling import ScopedRateThrottle
 from .exceptions import BookingConflict
 from .models import Booking, Room, Slot
 from .permissions import ReadOnlyOrAdmin
-from .serializers import BookingSerializer, RegisterSerializer, RoomSerializer, SlotSerializer
+from .serializers import BookingHistorySerializer, BookingSerializer, RegisterSerializer, RoomSerializer, SlotSerializer
 
 
 class RoomListView(generics.ListCreateAPIView):
@@ -54,6 +54,14 @@ class BookingCreateView(generics.CreateAPIView):
                 serializer.save(user=self.request.user if self.request.user.is_authenticated else None)
         except IntegrityError as exc:
             raise BookingConflict() from exc
+
+
+class MyBookingsView(generics.ListAPIView):
+    serializer_class = BookingHistorySerializer
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        return Booking.objects.filter(user=self.request.user).select_related("room", "slot")
 
 
 class RegisterView(generics.CreateAPIView):

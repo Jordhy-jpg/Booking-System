@@ -42,6 +42,7 @@ All routes work under `/api/` (for example, `/api/rooms`) and the three assessme
 | `POST` | `/api/auth/register/` | Register using Django's built-in `User` model. |
 | `POST` | `/api/auth/token/` | Exchange username/password for JWT access and refresh tokens. |
 | `POST` | `/api/auth/token/refresh/` | Refresh an access token. |
+| `GET` | `/api/bookings/mine` | List the signed-in user's bookings (JWT required). |
 
 Example booking request:
 
@@ -64,6 +65,7 @@ Example booking request:
 - Missing resources naturally return `404`; successful reads return `200` and bookings return `201`.
 - The booking write path uses an atomic transaction, row locking where supported, and a database uniqueness constraint. The database constraint is the final guard against simultaneous requests creating duplicate reservations.
 - Writes to the room/slot catalogue require a Django staff user; public users may browse and place reservations.
+- Signed-in users can see their own bookings. Reservations made while logged out remain guest reservations and are not attached to an account later.
 - DRF throttles anonymous clients to 100 requests/hour, authenticated clients to 500/hour, and booking/registration endpoints to 15/hour.
 
 ## Data and testing

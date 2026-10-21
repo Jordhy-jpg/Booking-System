@@ -4,6 +4,15 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 const apiBase = import.meta.env.VITE_API_URL || '/api'
 const steps = ['Choose room', 'Find a time', 'Your details', 'Confirm']
 const step = ref(1)
+const screen = ref('booking')
+const authMode = ref('login')
+const session = ref(null)
+try { session.value = JSON.parse(localStorage.getItem('workroom-session') || 'null') } catch { localStorage.removeItem('workroom-session') }
+const authForm = reactive({ username: '', email: '', password: '' })
+const authError = ref('')
+const authBusy = ref(false)
+const myBookings = ref([])
+const bookingsLoading = ref(false)
 const rooms = ref([])
 const slots = ref([])
 const loading = ref(false)
@@ -25,7 +34,9 @@ const canContinue = computed(() => {
 })
 
 async function request(path, options) {
-  const response = await fetch(`${apiBase}${path}`, options)
+  const headers = new Headers(options?.headers || {})
+  if (session.value?.access && !path.startsWith('/auth/')) headers.set('Authorization', `Bearer ${session.value.access}`)
+  const response = await fetch(`${apiBase}${path}`, { ...options, headers })
   const data = await response.json().catch(() => ({}))
   if (!response.ok) {
     const details = data.error?.details
@@ -33,6 +44,64 @@ async function request(path, options) {
     throw new Error(first || data.detail || 'Something went wrong. Please try again.')
   }
   return data
+}
+
+function setSession(data, username) {
+  session.value = { ...data, username }
+  localStorage.setItem('workroom-session', JSON.stringify(session.value))
+  authForm.password = ''
+  screen.value = 'booking'
+  authError.value = ''
+}
+
+function openAuth(mode = 'login') {
+  authMode.value = mode
+  authError.value = ''
+  screen.value = 'auth'
+}
+
+async function authenticate() {
+  authBusy.value = true
+  authError.value = ''
+  try {
+    if (authMode.value === 'register') {
+      await request('/auth/register/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: authForm.username, email: authForm.email, password: authForm.password }),
+      })
+    }
+    const tokens = await request('/auth/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: authForm.username, password: authForm.password }),
+    })
+    setSession(tokens, authForm.username)
+  } catch (err) {
+    authError.value = err.message
+  } finally {
+    authBusy.value = false
+  }
+}
+
+async function loadMyBookings() {
+  screen.value = 'bookings'
+  bookingsLoading.value = true
+  authError.value = ''
+  try {
+    myBookings.value = await request('/bookings/mine')
+  } catch (err) {
+    authError.value = err.message
+  } finally {
+    bookingsLoading.value = false
+  }
+}
+
+function signOut() {
+  session.value = null
+  myBookings.value = []
+  localStorage.removeItem('workroom-session')
+  screen.value = 'booking'
 }
 
 async function loadRooms() {
@@ -74,8 +143,9 @@ onMounted(loadRooms)
 
 <template>
   <main class="site-shell">
-    <header class="nav"><a class="wordmark" href="#" @click.prevent="restart"><span>W</span> workroom</a><p>Meet with intent.</p></header>
+    <header class="nav"><a class="wordmark" href="#" @click.prevent="screen = 'booking'; restart()"><span>W</span> workroom</a><p>Meet with intent.</p><div class="account-actions"><template v-if="session"><button class="nav-link" @click="loadMyBookings">My bookings</button><span class="account-name">{{ session.username }}</span><button class="nav-link" @click="signOut">Sign out</button></template><template v-else><button class="nav-link" @click="openAuth('login')">Log in</button><button class="nav-join" @click="openAuth('register')">Create account</button></template></div></header>
 
+    <template v-if="screen === 'booking'">
     <section v-if="step < 5" class="hero"><p class="eyebrow">ROOM RESERVATION</p><h1>Make space<br><em>for good work.</em></h1><p class="lede">A calmer way to reserve a room for your next idea, conversation, or decision.</p></section>
 
     <section v-if="step < 5" class="progress" aria-label="Booking progress">
@@ -108,6 +178,37 @@ onMounted(loadRooms)
 
     <section v-if="step < 5" class="actions"><button v-if="step > 1" class="back" @click="back">← Back</button><span v-else></span><button class="continue" :disabled="!canContinue || submitting" @click="next">{{ submitting ? 'Reserving…' : step === 4 ? 'Confirm booking →' : 'Continue →' }}</button></section>
 
-    <section v-if="step === 5" class="success"><div class="success-mark">✓</div><p class="eyebrow">ALL SET</p><h1>Your room is<br><em>waiting.</em></h1><p class="lede">{{ selectedRoom?.name }} is reserved for {{ formattedDate }}, {{ selectedSlot?.time.slice(0, 5) }}.</p><div class="code"><span>BOOKING CODE</span><strong>{{ bookingCode }}</strong></div><button class="continue" @click="restart">Book another room →</button></section>
+    <section v-if="step === 5" class="success"><div class="success-mark">✓</div><p class="eyebrow">ALL SET</p><h1>Your room is<br><em>waiting.</em></h1><p class="lede">{{ selectedRoom?.name }} is reserved for {{ formattedDate }}, {{ selectedSlot?.time.slice(0, 5) }}.</p><div class="code"><span>BOOKING CODE</span><strong>{{ bookingCode }}</strong></div><p v-if="session" class="hint">This reservation is saved to your account.</p><p v-else class="hint">Log in before booking to keep this reservation in your account.</p><button class="continue" @click="restart">Book another room →</button></section>
+    </template>
+
+    <section v-else-if="screen === 'auth'" class="account-panel panel">
+      <p class="eyebrow">YOUR WORKROOM ACCOUNT</p>
+      <h2>{{ authMode === 'login' ? 'Welcome back.' : 'Make it yours.' }}</h2>
+      <p class="account-intro">{{ authMode === 'login' ? 'Log in to find your upcoming room reservations.' : 'Create an account to keep all your room reservations together.' }}</p>
+      <p v-if="authError" class="alert" role="alert">{{ authError }}</p>
+      <form class="account-form" @submit.prevent="authenticate">
+        <label><span>Username</span><input v-model="authForm.username" autocomplete="username" required minlength="3" /></label>
+        <label v-if="authMode === 'register'"><span>Email address</span><input v-model="authForm.email" type="email" autocomplete="email" required /></label>
+        <label><span>Password</span><input v-model="authForm.password" type="password" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" required minlength="8" /></label>
+        <button class="continue" :disabled="authBusy">{{ authBusy ? 'One moment…' : authMode === 'login' ? 'Log in →' : 'Create account →' }}</button>
+      </form>
+      <p class="account-switch">{{ authMode === 'login' ? 'New to workroom?' : 'Already have an account?' }} <button class="inline-link" @click="openAuth(authMode === 'login' ? 'register' : 'login')">{{ authMode === 'login' ? 'Create an account' : 'Log in' }}</button></p>
+      <button class="text-back" @click="screen = 'booking'">← Back to rooms</button>
+    </section>
+
+    <section v-else class="bookings-view">
+      <div class="bookings-heading"><div><p class="eyebrow">YOUR WORKROOM ACCOUNT</p><h1>Room to return to.</h1><p class="lede">Reservations made while logged in appear here.</p></div><span class="booking-count">{{ myBookings.length }} {{ myBookings.length === 1 ? 'reservation' : 'reservations' }}</span></div>
+      <p v-if="authError" class="alert" role="alert">{{ authError }}</p>
+      <div v-if="bookingsLoading" class="empty-bookings">Gathering your reservations…</div>
+      <div v-else-if="myBookings.length" class="booking-list">
+        <article v-for="booking in myBookings" :key="booking.code" class="booking-card">
+          <div class="booking-card-top"><span class="booking-date">{{ new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(`${booking.date}T00:00:00`)) }}</span><span class="booking-code">{{ booking.code }}</span></div>
+          <h2>{{ booking.room }}</h2>
+          <div class="booking-meta"><span><small>TIME</small>{{ booking.time }}</span><span><small>GUESTS</small>{{ booking.participants }} people</span></div>
+        </article>
+      </div>
+      <div v-else-if="!authError" class="empty-bookings"><span class="empty-mark">W</span><h2>Nothing on the calendar yet.</h2><p>Book a room while logged in and it will be waiting here.</p><button class="continue" @click="screen = 'booking'; restart()">Explore rooms →</button></div>
+      <button class="text-back" @click="screen = 'booking'">← Back to rooms</button>
+    </section>
   </main>
 </template>

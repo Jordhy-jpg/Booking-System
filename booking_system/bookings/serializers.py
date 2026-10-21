@@ -55,6 +55,15 @@ class BookingSerializer(serializers.ModelSerializer):
         return attrs
 
 
+class BookingHistorySerializer(serializers.ModelSerializer):
+    room = serializers.CharField(source="room.name")
+    time = serializers.TimeField(source="slot.time", format="%H:%M")
+
+    class Meta:
+        model = Booking
+        fields = ("code", "room", "date", "time", "participants", "created_at")
+
+
 class RegisterSerializer(serializers.Serializer):
     username = serializers.CharField(min_length=3, max_length=150)
     email = serializers.EmailField()
