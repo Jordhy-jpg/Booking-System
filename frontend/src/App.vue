@@ -159,42 +159,129 @@ onMounted(loadRooms)
 
 <template>
   <main class="site-shell">
-    <header class="nav"><a class="wordmark" href="#" @click.prevent="screen = 'booking'; restart()"><span>W</span> workroom</a><p>Meet with intent.</p><div class="account-actions"><template v-if="session"><button class="nav-link" @click="loadMyBookings">My bookings</button><span class="account-name">{{ session.username }}</span><button class="nav-link" @click="signOut">Sign out</button></template><template v-else><button class="nav-link" @click="openAuth('login')">Log in</button><button class="nav-join" @click="openAuth('register')">Create account</button></template></div></header>
+    <header class="nav"><a class="wordmark" href="#" @click.prevent="screen = 'booking'; restart()"><span>W</span>
+        workroom</a>
+      <p>Meet with intent.</p>
+      <div class="account-actions"><template v-if="session"><button class="nav-link" @click="loadMyBookings">My
+            bookings</button><span class="account-name">{{ session.username }}</span><button class="nav-link"
+            @click="signOut">Sign out</button></template><template v-else><button class="nav-link"
+            @click="openAuth('login')">Log in</button><button class="nav-join" @click="openAuth('register')">Create
+            account</button></template>
+      </div>
+    </header>
 
     <template v-if="screen === 'booking'">
-    <section v-if="step < 5" class="hero"><p class="eyebrow">ROOM RESERVATION</p><h1>Make space<br><em>for good work.</em></h1><p class="lede">A calmer way to reserve a room for your next idea, conversation, or decision.</p></section>
+      <section v-if="step < 5" class="hero">
+        <p class="eyebrow">ROOM RESERVATION</p>
+        <h1>Make space<br><em>for good work.</em></h1>
+        <p class="lede">A calmer way to reserve a room for your next idea, conversation, or decision.</p>
+      </section>
 
-    <section v-if="step < 5" class="progress" aria-label="Booking progress">
-      <template v-for="(label, index) in steps" :key="label"><div :class="['progress-item', { active: step === index + 1, complete: step > index + 1 }]"><span>{{ String(index + 1).padStart(2, '0') }}</span><small>{{ label }}</small></div><i v-if="index < steps.length - 1"></i></template>
-    </section>
+      <section v-if="step < 5" class="progress" aria-label="Booking progress">
+        <template v-for="(label, index) in steps" :key="label">
+          <div :class="['progress-item', { active: step === index + 1, complete: step > index + 1 }]"><span>{{
+            String(index + 1).padStart(2, '0') }}</span><small>{{ label }}</small></div><i
+            v-if="index < steps.length - 1"></i>
+        </template>
+      </section>
 
-    <p v-if="error" class="alert" role="alert">{{ error }}</p>
+      <p v-if="error" class="alert" role="alert">{{ error }}</p>
 
-    <section v-if="step === 1" class="panel room-panel">
-      <div class="section-heading"><div><p class="eyebrow">01 — ROOM</p><h2>Pick your setting.</h2></div><p>{{ loading ? 'Loading rooms…' : `${rooms.length} spaces available` }}</p></div>
-      <div class="room-grid">
-        <button v-for="room in rooms" :key="room.id" class="room-card" :class="{ selected: form.room === room.id }" @click="selectRoom(room)">
-          <img :src="room.image" :alt="room.name" /><div class="card-content"><div class="room-title"><h3>{{ room.name }}</h3><span>{{ room.capacity }} people</span></div><div class="facilities"><b v-for="facility in room.facilities.slice(0, 3)" :key="facility">{{ facility }}</b></div><div class="price">{{ new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(room.pricePerHour) }} <small>/ hour</small></div></div>
-        </button>
-      </div>
-    </section>
+      <section v-if="step === 1" class="panel room-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">01 — ROOM</p>
+            <h2>Pick your setting.</h2>
+          </div>
+          <p>{{ loading ? 'Loading rooms…' : `${rooms.length} spaces available` }}</p>
+        </div>
+        <div class="room-grid">
+          <button v-for="room in rooms" :key="room.id" class="room-card" :class="{ selected: form.room === room.id }"
+            @click="selectRoom(room)">
+            <img :src="room.image" :alt="room.name" />
+            <div class="card-content">
+              <div class="room-title">
+                <h3>{{ room.name }}</h3><span>{{ room.capacity }} people</span>
+              </div>
+              <div class="facilities"><b v-for="facility in room.facilities.slice(0, 3)" :key="facility">{{ facility
+                  }}</b>
+              </div>
+              <div class="price">{{ new Intl.NumberFormat('id-ID', {
+                style: 'currency', currency: 'IDR',
+                maximumFractionDigits: 0
+              }).format(room.pricePerHour) }} <small>/ hour</small></div>
+            </div>
+          </button>
+        </div>
+      </section>
 
-    <section v-if="step === 2" class="panel time-panel">
-      <div class="section-heading"><div><p class="eyebrow">02 — DATE & TIME</p><h2>Find your window.</h2></div><p>{{ selectedRoom?.name }}</p></div>
-      <div class="date-row"><label><span>Date</span><input v-model="form.date" :min="today" type="date" /></label><div class="capacity-note"><span>Capacity</span><strong>{{ selectedRoom?.capacity }} people</strong></div></div>
-      <div v-if="form.date" class="slots"><p class="slot-label">Available on {{ formattedDate }}</p><div class="slot-grid"><button v-for="slot in slots" :key="slot.id" :disabled="!slot.isAvailable" :class="{ selected: form.slot === slot.id }" @click="form.slot = slot.id">{{ slot.time.slice(0, 5) }}<small>{{ slot.isAvailable ? 'available' : 'taken' }}</small></button></div></div>
-      <p v-else class="empty">Choose a date to see the openings.</p>
-    </section>
+      <section v-if="step === 2" class="panel time-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">02 — DATE & TIME</p>
+            <h2>Find your window.</h2>
+          </div>
+          <p>{{ selectedRoom?.name }}</p>
+        </div>
+        <div class="date-row"><label><span>Date</span><input v-model="form.date" :min="today" type="date" /></label>
+          <div class="capacity-note"><span>Capacity</span><strong>{{ selectedRoom?.capacity }} people</strong></div>
+        </div>
+        <div v-if="form.date" class="slots">
+          <p class="slot-label">Available on {{ formattedDate }}</p>
+          <div class="slot-grid"><button v-for="slot in slots" :key="slot.id" :disabled="!slot.isAvailable"
+              :class="{ selected: form.slot === slot.id }" @click="form.slot = slot.id">{{ slot.time.slice(0, 5)
+              }}<small>{{
+                slot.isAvailable ? 'available' : 'taken' }}</small></button></div>
+        </div>
+        <p v-else class="empty">Choose a date to see the openings.</p>
+      </section>
 
-    <section v-if="step === 3" class="panel details-panel"><div class="section-heading"><div><p class="eyebrow">03 — HOST DETAILS</p><h2>Who is this for?</h2></div></div>
-      <div class="form-grid"><label class="wide"><span>Your name</span><input v-model="form.name" placeholder="Your full name" autocomplete="name" /></label><label><span>Email address</span><input v-model="form.email" type="email" placeholder="you@company.com" autocomplete="email" /></label><label><span>Phone number</span><input v-model="form.phone" type="tel" placeholder="0812 3456 7890" autocomplete="tel" /></label><label><span>Guests</span><input v-model.number="form.participants" type="number" min="1" :max="selectedRoom?.capacity" /></label></div><p class="hint">Up to {{ selectedRoom?.capacity }} guests are welcome in this room.</p>
-    </section>
+      <section v-if="step === 3" class="panel details-panel">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">03 — HOST DETAILS</p>
+            <h2>Who is this for?</h2>
+          </div>
+        </div>
+        <div class="form-grid"><label class="wide"><span>Your name</span><input v-model="form.name"
+              placeholder="Your full name" autocomplete="name" /></label><label><span>Email address</span><input
+              v-model="form.email" type="email" placeholder="you@company.com"
+              autocomplete="email" /></label><label><span>Phone number</span><input v-model="form.phone" type="tel"
+              placeholder="0812 3456 7890" autocomplete="tel" /></label><label><span>Guests</span><input
+              v-model.number="form.participants" type="number" min="1" :max="selectedRoom?.capacity" /></label></div>
+        <p class="hint">Up to {{ selectedRoom?.capacity }} guests are welcome in this room.</p>
+      </section>
 
-    <section v-if="step === 4" class="panel confirm-panel"><p class="eyebrow">04 — ONE LAST LOOK</p><h2>Ready when you are.</h2><div class="receipt"><div><span>Room</span><strong>{{ selectedRoom?.name }}</strong></div><div><span>Date</span><strong>{{ formattedDate }}</strong></div><div><span>Time</span><strong>{{ selectedSlot?.time.slice(0, 5) }}</strong></div><div><span>Guests</span><strong>{{ form.participants }} people</strong></div><div class="total"><span>Hourly rate</span><strong>{{ price }}</strong></div></div><p class="confirmation-note">By confirming, you reserve this room for the selected time. We’ll send the booking details to {{ form.email }}.</p></section>
+      <section v-if="step === 4" class="panel confirm-panel">
+        <p class="eyebrow">04 — ONE LAST LOOK</p>
+        <h2>Ready when you are.</h2>
+        <div class="receipt">
+          <div><span>Room</span><strong>{{ selectedRoom?.name }}</strong></div>
+          <div><span>Date</span><strong>{{ formattedDate }}</strong></div>
+          <div><span>Time</span><strong>{{ selectedSlot?.time.slice(0, 5) }}</strong></div>
+          <div><span>Guests</span><strong>{{ form.participants }} people</strong></div>
+          <div class="total"><span>Hourly rate</span><strong>{{ price }}</strong></div>
+        </div>
+        <p class="confirmation-note">By confirming, you reserve this room for the selected time. We’ll send the booking
+          details to {{ form.email }}.</p>
+      </section>
 
-    <section v-if="step < 5" class="actions"><button v-if="step > 1" class="back" @click="back">← Back</button><span v-else></span><button class="continue" :disabled="!canContinue || submitting" @click="next">{{ submitting ? 'Reserving…' : step === 4 ? 'Confirm booking →' : 'Continue →' }}</button></section>
+      <section v-if="step < 5" class="actions"><button v-if="step > 1" class="back" @click="back">← Back</button><span
+          v-else></span><button class="continue" :disabled="!canContinue || submitting" @click="next">{{ submitting ?
+            'Reserving…' : step === 4 ? 'Confirm booking →' : 'Continue →' }}</button></section>
 
-    <section v-if="step === 5" class="success"><div class="success-mark">✓</div><p class="eyebrow">ALL SET</p><h1>Your room is<br><em>waiting.</em></h1><p class="lede">{{ selectedRoom?.name }} is reserved for {{ formattedDate }}, {{ selectedSlot?.time.slice(0, 5) }}.</p><div class="code"><span>BOOKING CODE</span><strong>{{ bookingCode }}</strong></div><p v-if="session" class="hint">This reservation is saved to your account.</p><p v-else class="hint">Log in before booking to keep this reservation in your account.</p><button class="continue" @click="restart">Book another room →</button></section>
+      <section v-if="step === 5" class="success">
+        <div class="success-mark">✓</div>
+        <p class="eyebrow">ALL SET</p>
+        <h1>Your room is<br><em>waiting.</em></h1>
+        <p class="lede">{{ selectedRoom?.name }} is reserved for {{ formattedDate }}, {{ selectedSlot?.time.slice(0, 5)
+          }}.
+        </p>
+        <div class="code"><span>BOOKING CODE</span><strong>{{ bookingCode }}</strong></div>
+        <p v-if="session" class="hint">This reservation is saved to your account.</p>
+        <p v-else class="hint">Log in before booking to keep this reservation in your account.</p><button
+          class="continue" @click="restart">Book another room →</button>
+      </section>
     </template>
 
     <section v-else-if="screen === 'auth'" class="account-panel panel">
@@ -203,32 +290,59 @@ onMounted(loadRooms)
       <p class="account-intro">{{ authMode === 'login' ? 'Log in to find your upcoming room reservations.' : 'Create an account to keep all your room reservations together.' }}</p>
       <p v-if="authError" class="alert" role="alert">{{ authError }}</p>
       <form class="account-form" @submit.prevent="authenticate">
-        <label><span>Username</span><input v-model="authForm.username" autocomplete="username" required minlength="3" /></label>
-        <label v-if="authMode === 'register'"><span>Email address</span><input v-model="authForm.email" type="email" autocomplete="email" required /></label>
-        <label><span>Password</span><input v-model="authForm.password" type="password" :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" required minlength="8" /></label>
-        <button class="continue" :disabled="authBusy">{{ authBusy ? 'One moment…' : authMode === 'login' ? 'Log in →' : 'Create account →' }}</button>
+        <label><span>Username</span><input v-model="authForm.username" autocomplete="username" required
+            minlength="3" /></label>
+        <label v-if="authMode === 'register'"><span>Email address</span><input v-model="authForm.email" type="email"
+            autocomplete="email" required /></label>
+        <label><span>Password</span><input v-model="authForm.password" type="password"
+            :autocomplete="authMode === 'login' ? 'current-password' : 'new-password'" required minlength="8" /></label>
+        <button class="continue" :disabled="authBusy">{{ authBusy ? 'One moment…' : authMode === 'login' ? 'Log in →' :
+          'Create account →' }}</button>
       </form>
-      <p class="account-switch">{{ authMode === 'login' ? 'New to workroom?' : 'Already have an account?' }} <button class="inline-link" @click="openAuth(authMode === 'login' ? 'register' : 'login')">{{ authMode === 'login' ? 'Create an account' : 'Log in' }}</button></p>
+      <p class="account-switch">{{ authMode === 'login' ? 'New to workroom?' : 'Already have an account?' }} <button
+          class="inline-link" @click="openAuth(authMode === 'login' ? 'register' : 'login')">{{ authMode === 'login' ?
+            'Create an account' : 'Log in' }}</button></p>
       <button class="text-back" @click="screen = 'booking'">← Back to rooms</button>
     </section>
 
     <section v-else class="bookings-view">
-      <div class="bookings-heading"><div><p class="eyebrow">YOUR WORKROOM ACCOUNT</p><h1>Room to return to.</h1><p class="lede">Reservations made while logged in appear here.</p></div><span class="booking-count">{{ myBookings.length }} {{ myBookings.length === 1 ? 'reservation' : 'reservations' }}</span></div>
+      <div class="bookings-heading">
+        <div>
+          <p class="eyebrow">YOUR WORKROOM ACCOUNT</p>
+          <h1>Room to return to.</h1>
+          <p class="lede">Reservations made while logged in appear here.</p>
+        </div><span class="booking-count">{{ myBookings.length }} {{ myBookings.length === 1 ? 'reservation' :
+          'reservations' }}</span>
+      </div>
       <p v-if="authError" class="alert" role="alert">{{ authError }}</p>
       <div v-if="bookingsLoading" class="empty-bookings">Gathering your reservations…</div>
       <div v-else-if="myBookings.length" class="booking-list">
         <article v-for="booking in myBookings" :key="booking.code" class="booking-card">
-          <div class="booking-card-top"><span class="booking-date">{{ new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(`${booking.date}T00:00:00`)) }}</span><span class="booking-code">{{ booking.code }}</span></div>
+          <div class="booking-card-top"><span class="booking-date">{{ new Intl.DateTimeFormat('en', {
+            dateStyle:
+              'medium'
+          }).format(new Date(`${booking.date}T00:00:00`)) }}</span><span class="booking-code">{{ booking.code
+              }}</span>
+          </div>
           <h2>{{ booking.room }}</h2>
-          <div class="booking-meta"><span><small>TIME</small>{{ booking.time }}</span><span><small>GUESTS</small>{{ booking.participants }} people</span></div>
+          <div class="booking-meta"><span><small>TIME</small>{{ booking.time }}</span><span><small>GUESTS</small>{{
+            booking.participants }} people</span></div>
           <div class="booking-cancel-row">
             <span v-if="booking.cancelledAt" class="cancel-status">Cancelled</span>
-            <template v-else-if="booking.canCancel"><span class="cancel-deadline">Cancel by {{ new Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(`${booking.cancelBy}T00:00:00`)) }}</span><button class="cancel-button" :disabled="cancelingCode === booking.code" @click="cancelBooking(booking)">{{ cancelingCode === booking.code ? 'Cancelling…' : 'Cancel booking' }}</button></template>
+            <template v-else-if="booking.canCancel"><span class="cancel-deadline">Cancel by {{ new
+              Intl.DateTimeFormat('en', { dateStyle: 'medium' }).format(new Date(`${booking.cancelBy}T00:00:00`))
+                }}</span><button class="cancel-button" :disabled="cancelingCode === booking.code"
+                @click="cancelBooking(booking)">{{ cancelingCode === booking.code ? 'Cancelling…' : 'Cancel booking'
+                }}</button></template>
             <span v-else class="cancel-status">Cancellation closed</span>
           </div>
         </article>
       </div>
-      <div v-else-if="!authError" class="empty-bookings"><span class="empty-mark">W</span><h2>Nothing on the calendar yet.</h2><p>Book a room while logged in and it will be waiting here.</p><button class="continue" @click="screen = 'booking'; restart()">Explore rooms →</button></div>
+      <div v-else-if="!authError" class="empty-bookings"><span class="empty-mark">W</span>
+        <h2>Nothing on the calendar yet.</h2>
+        <p>Book a room while logged in and it will be waiting here.</p><button class="continue"
+          @click="screen = 'booking'; restart()">Explore rooms →</button>
+      </div>
       <button class="text-back" @click="screen = 'booking'">← Back to rooms</button>
     </section>
   </main>
